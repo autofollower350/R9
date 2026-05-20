@@ -1,80 +1,48 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 
 <head>
 
-<meta charset="UTF-8">
-
-<meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
->
-
 <title>JNVU Admit Card Portal</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
 
-*{
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
-}
-
 body{
-
-    font-family:Arial,sans-serif;
-
+    font-family:Arial;
     background:#eef2f3;
-
-    height:100vh;
-
-    display:flex;
-
-    justify-content:center;
-
-    align-items:center;
+    text-align:center;
+    padding-top:100px;
 }
 
 .card{
 
-    width:100%;
+    background:white;
+
+    width:90%;
     max-width:420px;
 
-    background:#fff;
+    margin:auto;
 
     padding:30px;
 
     border-radius:12px;
 
-    box-shadow:0 4px 15px rgba(0,0,0,.1);
-
-    text-align:center;
-}
-
-h2{
-    color:#ff4b4b;
-}
-
-p{
-
-    color:#666;
-
-    margin-top:10px;
-
-    margin-bottom:20px;
+    box-shadow:0 0 15px rgba(0,0,0,.1);
 }
 
 input{
 
-    width:100%;
+    width:90%;
 
-    padding:13px;
+    padding:12px;
+
+    margin-top:15px;
 
     border:1px solid #ccc;
 
     border-radius:6px;
-
-    outline:none;
 
     font-size:16px;
 
@@ -83,11 +51,11 @@ input{
 
 button{
 
-    width:100%;
+    width:95%;
+
+    padding:12px;
 
     margin-top:15px;
-
-    padding:13px;
 
     border:none;
 
@@ -95,26 +63,11 @@ button{
 
     background:#ff4b4b;
 
-    color:#fff;
+    color:white;
 
     font-size:16px;
 
-    font-weight:bold;
-
     cursor:pointer;
-}
-
-button:active{
-    transform:scale(.98);
-}
-
-.loader{
-
-    margin-top:15px;
-
-    color:#555;
-
-    display:none;
 }
 
 .footer{
@@ -143,7 +96,6 @@ button:active{
     </p>
 
     <form
-        id="form"
         action="/download"
         method="POST"
     >
@@ -153,18 +105,15 @@ button:active{
             name="form_no"
             placeholder="Enter Form Number"
             required
-            autocomplete="off"
         >
 
-        <button id="btn" type="submit">
-            🚀 Download Admit Card
+        <br>
+
+        <button type="submit">
+            🚀 Get Admit Card
         </button>
 
     </form>
-
-    <div class="loader" id="loader">
-        ⏳ Processing...
-    </div>
 
     <div class="footer">
         Powered by Flask & Playwright
@@ -172,24 +121,6 @@ button:active{
 
 </div>
 
-<script>
-
-const form = document.getElementById('form');
-
-const btn = document.getElementById('btn');
-
-const loader = document.getElementById('loader');
-
-form.addEventListener('submit', () => {
-
-    btn.disabled = true;
-
-    btn.innerHTML = 'Please Wait...';
-
-    loader.style.display = 'block';
-});
-
-</script>
-
 </body>
+
 </html>
