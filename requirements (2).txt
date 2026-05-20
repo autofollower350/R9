@@ -1,6 +1,0 @@
-playwright
-pdfplumber
-pymupdf
-nest_asyncio
-python-telegram-bot
-
