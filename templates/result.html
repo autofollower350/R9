@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<title>Student Details</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+
+body{
+    font-family:Arial;
+    background:#f2f2f2;
+    padding-top:50px;
+    text-align:center;
+}
+
+.card{
+
+    background:white;
+
+    width:90%;
+    max-width:500px;
+
+    margin:auto;
+
+    padding:30px;
+
+    border-radius:12px;
+
+    box-shadow:0 0 15px rgba(0,0,0,.1);
+}
+
+.info{
+
+    text-align:left;
+
+    margin-top:20px;
+
+    line-height:2;
+}
+
+.btn{
+
+    display:inline-block;
+
+    margin-top:20px;
+
+    padding:12px 20px;
+
+    background:#ff4b4b;
+
+    color:white;
+
+    text-decoration:none;
+
+    border-radius:6px;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="card">
+
+    <h2>
+        ✅ Admit Card Found
+    </h2>
+
+    <div class="info">
+
+        <b>Name:</b>
+        {{ name }}
+        <br>
+
+        <b>Father:</b>
+        {{ father }}
+        <br>
+
+        <b>Roll No:</b>
+        {{ roll }}
+        <br>
+
+        <b>Center:</b>
+        {{ center }}
+        <br>
+
+    </div>
+
+    <a
+        class="btn"
+        href="/pdf/{{ form_no }}"
+    >
+        📄 Download PDF
+    </a>
+
+</div>
+
+</body>
+
+</html>
