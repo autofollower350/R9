@@ -1,21 +1,24 @@
-from flask import Flask, request, send_file, render_template
+from flask import Flask, request, render_template, send_file
 import asyncio
 import os
 import nest_asyncio
 import fitz
 import re
+
 from playwright.async_api import async_playwright
 
 nest_asyncio.apply()
 
 app = Flask(__name__)
 
-# --- ब्राउज़र मैनेजमेंट ---
+# ---------------- GLOBAL ----------------
 
 browser_instance = None
 playwright_instance = None
 
-# --- PDF विश्लेषण ---
+URL = "https://erp.jnvuiums.in/(S(biolzjtwlrcfmzwwzgs5uj5n))/Exam/Pre_Exam/Exam_ForALL_AdmitCard.aspx#"
+
+# ---------------- PDF INFO ----------------
 
 def extract_student_info(pdf_path):
 
@@ -35,7 +38,7 @@ def extract_student_info(pdf_path):
         for page in doc:
             text += page.get_text()
 
-        # रोल नंबर
+        # Roll Number
 
         roll_match = re.search(
             r"Roll no is\s+([\w\d]+)",
@@ -47,7 +50,7 @@ def extract_student_info(pdf_path):
                 roll_match.group(1).strip()
             )
 
-        # छात्र का नाम
+        # Student Name
 
         name_match = re.search(
             r"NAME OF CANDIDATE\s*:\s*(.*)",
@@ -62,7 +65,7 @@ def extract_student_info(pdf_path):
                 .strip()
             )
 
-        # पिता का नाम
+        # Father Name
 
         father_match = re.search(
             r"FATHER'S NAME\s*:\s*(.*)",
@@ -77,7 +80,7 @@ def extract_student_info(pdf_path):
                 .strip()
             )
 
-        # परीक्षा केंद्र
+        # Center
 
         center_pattern = (
             r"Exam Centre is\s*(.*?)"
@@ -126,7 +129,7 @@ def extract_student_info(pdf_path):
 
         return info
 
-# --- ब्राउज़र ---
+# ---------------- BROWSER ----------------
 
 async def get_browser():
 
@@ -141,13 +144,19 @@ async def get_browser():
 
         browser_instance = (
             await playwright_instance.chromium.launch(
-                headless=True
+                headless=True,
+
+                args=[
+                    "--no-sandbox",
+                    "--disable-dev-shm-usage",
+                    "--disable-setuid-sandbox"
+                ]
             )
         )
 
     return browser_instance
 
-# --- डाउनलोड लॉजिक ---
+# ---------------- DOWNLOAD ----------------
 
 async def download_jnvu_pdf(form_number):
 
@@ -163,24 +172,17 @@ async def download_jnvu_pdf(form_number):
 
     page = await context.new_page()
 
-    # स्पीड के लिए फालतू रिसोर्स ब्लॉक
+    # Speed Optimization
 
     await page.route(
         "**/*.{png,jpg,jpeg,gif,css,woff2}",
         lambda route: route.abort()
     )
 
-    url = (
-        "https://erp.jnvuiums.in/"
-        "(S(biolzjtwlrcfmzwwzgs5uj5n))/"
-        "Exam/Pre_Exam/"
-        "Exam_ForALL_AdmitCard.aspx#"
-    )
-
     try:
 
         await page.goto(
-            url,
+            URL,
             wait_until="commit",
             timeout=20000
         )
@@ -197,6 +199,8 @@ async def download_jnvu_pdf(form_number):
         async with page.expect_download(
             timeout=10000
         ) as download_info:
+
+            # Double Click
 
             await submit_btn.click()
 
@@ -220,7 +224,7 @@ async def download_jnvu_pdf(form_number):
 
         return None
 
-# --- HOME PAGE ---
+# ---------------- HOME ----------------
 
 @app.route("/")
 def home():
@@ -229,7 +233,7 @@ def home():
         "index.html"
     )
 
-# --- DOWNLOAD ROUTE ---
+# ---------------- DOWNLOAD ROUTE ----------------
 
 @app.route("/download", methods=["POST"])
 def download():
@@ -249,7 +253,7 @@ def download():
         """
 
     print(
-        f"Searching for Admit Card: {form_no}"
+        f"Searching Admit Card: {form_no}"
     )
 
     file_path = asyncio.run(
@@ -265,23 +269,30 @@ def download():
             file_path
         )
 
-        print("\n" + "=" * 30)
-
-        print("✅ Admit Card Found!")
-
-        print(f"Name: {data['name']}")
-
-        print(f"Father: {data['father']}")
-
-        print(f"Roll No: {data['roll']}")
-
-        print(f"Center: {data['center']}")
-
-        print(
-            f"File Saved: {file_path}"
+        return render_template(
+            "result.html",
+            name=data["name"],
+            father=data["father"],
+            roll=data["roll"],
+            center=data["center"],
+            form_no=form_no
         )
 
-        print("=" * 30 + "\n")
+    return """
+    <h3>❌ Admit Card Not Found</h3>
+    <a href="/">Try Again</a>
+    """
+
+# ---------------- PDF DOWNLOAD ----------------
+
+@app.route("/pdf/<form_no>")
+def pdf_download(form_no):
+
+    file_path = (
+        f"admit_card_{form_no}.pdf"
+    )
+
+    if os.path.exists(file_path):
 
         return send_file(
             file_path,
@@ -291,12 +302,9 @@ def download():
             )
         )
 
-    return """
-    <h3>❌ Admit Card Not Found</h3>
-    <a href="/">Try Again</a>
-    """
+    return "PDF Not Found"
 
-# --- START SERVER ---
+# ---------------- START ----------------
 
 if __name__ == "__main__":
 
