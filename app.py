@@ -12,17 +12,17 @@ app = Flask(__name__)
 
 URL = "https://erp.jnvuiums.in/(S(biolzjtwlrcfmzwwzgs5uj5n))/Exam/Pre_Exam/Exam_ForALL_AdmitCard.aspx#"
 
-# Global Playwright Variables
+# Global Browser Instances (Isse har request par naya browser nahi khulega, speed bohot badhegi)
 playwright_instance = None
 browser_instance = None
 
-# ---------------- SPEED OPTIMIZATION BLOCK ----------------
-# Faltu ki cheezein block karne ke liye list
+# ---------------- SPEED OPTIMIZATION CONFIG ----------------
+# Faltu ke heavy assets ko block karne ke liye list
 BLOCK_RESOURCE_TYPES = ["image", "stylesheet", "media", "font", "texttrack"]
 BLOCK_RESOURCE_NAMES = ["google-analytics", "analytics", "font-awesome", "jquery"]
 
 async def init_browser():
-    """App start hote hi browser ko ek baar background me chala dene ke liye"""
+    """App start hote hi browser ko background me ek baar launch karne ke liye"""
     global playwright_instance, browser_instance
     if browser_instance is None:
         playwright_instance = await async_playwright().start()
@@ -32,7 +32,7 @@ async def init_browser():
                 "--no-sandbox",
                 "--disable-dev-shm-usage",
                 "--disable-setuid-sandbox",
-                "--disable-gpu" # Speed badhane ke liye GPU disable kiya
+                "--disable-gpu"  # Speed ke liye GPU hardware acceleration disable kiya
             ]
         )
     return browser_instance
@@ -67,16 +67,16 @@ def extract_student_info(pdf_path):
         print(f"Extraction Error: {e}")
         return info
 
-# ---------------- ROUTE ROUTINE TO DOWNLOAD ----------------
+# ---------------- DOWNLOAD ROUTINE ----------------
 async def download_jnvu_pdf(form_number):
     pdf_path = f"admit_card_{form_number}.pdf"
     
-    # Pehle se bana hua browser instance use karein
+    # Pehle se bana hua background browser reuse karein (Saves 5-8 seconds)
     browser = await init_browser()
     context = await browser.new_context(accept_downloads=True)
     page = await context.new_page()
 
-    # Heavy Network Optimization (Page fast load hone ke liye)
+    # Network Request Interception (Page fast load hone ke liye faltu scripts block)
     async def route_intercept(route):
         req = route.request
         if req.resource_type in BLOCK_RESOURCE_TYPES or any(key in req.url for key in BLOCK_RESOURCE_NAMES):
@@ -87,14 +87,16 @@ async def download_jnvu_pdf(form_number):
     await page.route("**/*", route_intercept)
 
     try:
-        # domcontentloaded ya commit fast hota hai load event se
+        # domcontentloaded use kiya jo full load se bohot fast hai
         await page.goto(URL, wait_until="domcontentloaded", timeout=15000)
 
         await page.fill("#txtchallanNo", str(form_number))
         submit_btn = page.locator("#btnGetResult")
 
-        # Ek single fast click se download trigger karein
-        async with page.expect_download(timeout=8000) as download_info:
+        # Aapka Double Click Logic (JNVU Server ke liye retained)
+        async with page.expect_download(timeout=10000) as download_info:
+            await submit_btn.click()
+            await asyncio.sleep(0.3)  # Delay thoda kam kiya (0.5 se 0.3) taaki fast ho
             await submit_btn.click()
 
         download = await download_info.value
@@ -119,9 +121,8 @@ def download():
     if not form_no.isdigit():
         return '<h3>❌ Invalid Form Number</h3><a href="/">Go Back</a>'
 
-    print(f"⚡ Searching Fast Admit Card: {form_no}")
+    print(f"⚡ Searching Admit Card (Double Click Mode): {form_no}")
 
-    # Event loop ke jhanjhat se bachne ke liye loop create/get karein
     try:
         loop = asyncio.get_event_loop()
     except RuntimeError:
@@ -151,7 +152,8 @@ def pdf_download(form_no):
     return "PDF Not Found"
 
 if __name__ == "__main__":
-    # Server start hote hi background me browser launch ho jayega
+    # Server start hote hi background me browser launch ho jayega, user ka wait nahi karega
     asyncio.run(init_browser())
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
+
