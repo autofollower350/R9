@@ -10,7 +10,7 @@ app = Flask(__name__)
 
 URL = "https://erp.jnvuiums.in/(S(biolzjtwlrcfmzwwzgs5uj5n))/Exam/Pre_Exam/Exam_ForALL_AdmitCard.aspx#"
 
-# Global Browser Instances (Browser pehle se start rahega)
+# Global Browser Instances
 playwright_instance = None
 browser_instance = None
 
@@ -34,15 +34,24 @@ async def init_browser():
         )
     return browser_instance
 
-# ---------------- DOWNLOAD ROUTINE (FASTEST) ----------------
+# ---------------- DOWNLOAD ROUTINE (WITH VIDEO RECORDING) ----------------
 async def download_jnvu_pdf(form_number):
     pdf_path = f"admit_card_{form_number}.pdf"
     
     browser = await init_browser()
-    context = await browser.new_context(accept_downloads=True)
+    
+    # 🎥 SCREEN RECORDING CONFIGURATION:
+    # "videos/" folder me har ek request ki video record hogi.
+    # Video ka size default browser viewport jitna set kiya hai.
+    context = await browser.new_context(
+        accept_downloads=True,
+        record_video_dir="videos/",
+        record_video_size={"width": 1280, "height": 720}
+    )
+    
     page = await context.new_page()
 
-    # Network Interception (Sirf zaroori cheezein load hongi)
+    # Network Interception
     async def route_intercept(route):
         req = route.request
         if req.resource_type in BLOCK_RESOURCE_TYPES or any(key in req.url for key in BLOCK_RESOURCE_NAMES):
@@ -53,21 +62,27 @@ async def download_jnvu_pdf(form_number):
     await page.route("**/*", route_intercept)
 
     try:
-        # domcontentloaded se page milliseconds me ready ho jata hai
         await page.goto(URL, wait_until="domcontentloaded", timeout=15000)
 
         await page.fill("#txtchallanNo", str(form_number))
         submit_btn = page.locator("#btnGetResult")
 
-        # Aapka Double Click Logic (Retained)
+        # Double Click Logic
         async with page.expect_download(timeout=10000) as download_info:
             await submit_btn.click()
-            await asyncio.sleep(0.3)  # Fast double click gap
+            await asyncio.sleep(0.3)
             await submit_btn.click()
 
         download = await download_info.value
         await download.save_as(pdf_path)
+        
+        # Context close hote hi video automatic save ho jayegi
         await context.close()
+        
+        # Agar aapko video ka path check karna ho toh:
+        video_path = await page.video.path()
+        print(f"📹 Video recorded and saved at: {video_path}")
+        
         return pdf_path
 
     except Exception as e:
@@ -95,25 +110,20 @@ def download():
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
 
-    # PDF Download process execute hoga
     file_path = loop.run_until_complete(download_jnvu_pdf(form_no))
 
-    # Jaise hi file local server par aayegi, turant user ko direct download de dega
     if file_path and os.path.exists(file_path):
         response = send_file(
             file_path,
             as_attachment=True,
             download_name=f"JNVU_{form_no}.pdf"
         )
-        
-        # Download ke baad server se temporary file delete karne ke liye background task (Optional)
-        # Isse aapka server space full nahi hoga
         return response
 
     return '<h3>❌ Admit Card Not Found</h3><a href="/">Try Again</a>'
 
 if __name__ == "__main__":
-    # Server start hote hi browser ready ho jayega
     asyncio.run(init_browser())
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
+
